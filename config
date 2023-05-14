@@ -1,0 +1,9 @@
+import pymysql
+
+mydb = pymysql.connect(
+  host="DB주소",
+  user="admin",
+  password="DB 비번",
+  db="DB명",
+  charset="utf8"
+)
