@@ -1,11 +1,11 @@
 import pymysql
-from flask import Blueprint, Flask, Response, render_template, jsonify
-from flask_restx import Api, Resource, reqparse, fields
-from flask_restful import Resource, reqparse
-import json
+from flask import Blueprint, jsonify
+from flask_restx import Namespace, Api, Resource, reqparse, fields
 from config import mydb
 
 cam_blueprint = Blueprint('cam', __name__)
+cam_ns = Namespace('cam', description='캠 등록 및 조회')
+api = Api(namespace=cam_ns, version='1.0', title='SLS API', description='Sagger API', doc="/api-docs")
 
 class Cam:
     def __init__(self,uid,livestock_type,num = None):
@@ -25,23 +25,48 @@ def execute_sql(sql, params=None):
         cursor.execute(sql, params)
         result = cursor.fetchall()
     return result
-       
-# 캠 등록 API
-@cam_blueprint.route('/cam', methods=['post'])
-def addCam():
-    sql = "INSERT INTO raspi_cam (uid, livestock_type, num) SELECT %s, %s,IFNULL(MAX(num), 0)+1 FROM raspi_cam WHERE uid = %s AND livestock_type = %s"
-    parser = reqparse.RequestParser()
-    parser.add_argument('uid',type=str)
-    parser.add_argument('livestock_type',type=str)
-    
-    args = parser.parse_args()
-    with mydb:
-        with mydb.cursor() as cur:
-            cur.execute(sql, (args['uid'],args['livestock_type'],args['uid'],args['livestock_type']))
-            mydb.commit()
-    cam = Cam(args['uid'],args['livestock_type'])
-    return cam
 
+cam_fields = cam_ns.model('Livestock', {
+    'uid' : fields.String(),
+    'livestock_type' : fields.String(),
+    'num' : fields.Integer(),
+})
+
+# 캠 등록 API
+@cam_ns.route('/')
+class CamRegistration(Resource):
+    @cam_ns.expect(cam_fields)
+    def post(self):
+        sql = "INSERT INTO raspi_cam (uid, livestock_type, num) SELECT %s, %s,IFNULL(MAX(num), 0)+1 FROM raspi_cam WHERE uid = %s AND livestock_type = %s"
+        parser = reqparse.RequestParser()
+        parser.add_argument('uid',type=str)
+        parser.add_argument('livestock_type',type=str)
+    
+        args = parser.parse_args()
+        with mydb:
+            with mydb.cursor() as cur:
+                cur.execute(sql, (args['uid'],args['livestock_type'],args['uid'],args['livestock_type']))
+                mydb.commit()
+        cam = Cam(args['uid'],args['livestock_type'])
+        return cam
+
+#캠 조회(uid) 쿼리 함수
+def queryCamByUid(uid):
+    sql = "SELECT * FROM raspi_cam WHERE UID = (%s)"
+    temp = execute_sql(sql, (uid,))
+    result  = []
+    for i in temp:
+        result.append(Cam(i[0],i[1],i[2]))
+    return result
+
+#캠 조회(uid) API    
+@cam_ns.route("/<string:uid>")
+class CamManagerByUid(Resource):
+    @cam_ns.response(404, 'uid does not exist')
+    def get(self, uid):
+        result = queryCamByUid(uid)
+        return jsonify([x.__json__() for x in result])
+        
 #캠 조회 쿼리 함수
 def queryCamByUidAndlivestockType(uid, livestock_type):
     sql = "SELECT * FROM raspi_cam WHERE UID = (%s) AND livestock_type = (%s)"
@@ -51,23 +76,14 @@ def queryCamByUidAndlivestockType(uid, livestock_type):
         result.append(Cam(i[0],i[1],i[2]))
     return result
 
-#캠 조회(uid + livestock_type) API
-@cam_blueprint.route('/cam/<string:uid>/<string:livestock_type>', methods=['get'])
-def getCamByUidAndlivestockType(uid,livestock_type):
-    result = queryCamByUidAndlivestockType(uid, livestock_type)
-    return jsonify([x.__json__() for x in result])
-
-#캠 조회 쿼리 함수
-def queryCamByUid(uid):
-    sql = "SELECT * FROM raspi_cam WHERE UID = (%s)"
-    temp = execute_sql(sql, (uid,))
-    result  = []
-    for i in temp:
-        result.append(Cam(i[0],i[1],i[2]))
-    return result
-
-#캠 조회(uid) API
-@cam_blueprint.route('/cam/<string:uid>', methods=['get'])
-def getCamByUid(uid):
-    result = queryCamByUid(uid)
-    return jsonify([x.__json__() for x in result])
+#캠 조회(uid + livestock_type) API  
+@cam_ns.route("/<string:uid>/<string:livestock_type>")
+class CamManagerByUidAndType(Resource):
+    @cam_ns.response(404, 'uid does not exist')
+    def get(self, uid, livestock_type):
+        result = queryCamByUidAndlivestockType(uid, livestock_type)
+        return jsonify([x.__json__() for x in result])
+    
+api.add_resource(CamRegistration, '/')
+api.add_resource(CamManagerByUid, '/<string:uid>')
+api.add_resource(CamManagerByUidAndType, '/<string:uid>/<string:livestock_type>')
