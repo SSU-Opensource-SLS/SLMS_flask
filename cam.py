@@ -26,7 +26,7 @@ def execute_sql(sql, params=None):
         result = cursor.fetchall()
     return result
 
-cam_fields = cam_ns.model('Livestock', {
+cam_fields = cam_ns.model('Cam', {
     'uid' : fields.String(),
     'livestock_type' : fields.String(),
     'num' : fields.Integer(),

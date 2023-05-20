@@ -45,21 +45,20 @@ livestock_fields = livestock_ns.model('Livestock', {
 class LivestockRegistration(Resource):
     @livestock_ns.expect(livestock_fields)
     def post(self):
-        sql = "INSERT INTO livestock (uid,name,cattle,type,is_pregnant) VALUES (%s, %s, %s, %s, %s)"
+        sql = "INSERT INTO livestock (uid, livestock_type, name, cattle, num) SELECT %s, %s, %s, %s, IFNULL(MAX(num), 0)+1 FROM livestock WHERE uid = %s AND livestock_type = %s"
         parser = reqparse.RequestParser()
         parser.add_argument('uid',type=str)
-        parser.add_argument('name',type=str)
+        parser.add_argument('livestock_type',type=str)
         parser.add_argument('cattle',type=str)
-        parser.add_argument('type',type=str)
-        parser.add_argument('is_pregnant',type=bool)
+        parser.add_argument('name',type=str)
     
         args = parser.parse_args()
         with mydb:
             with mydb.cursor() as cur:
-                cur.execute(sql, (args['uid'],args['name'],args['cattle'],args['type'],args['is_pregnant']))
+                cur.execute(sql, (args['uid'],args['livestock_type'],args['name'],args['cattle'],args['uid'],args['livestock_type']))
                 mydb.commit()
-        ret = 'uid : ' + args['uid'] + ' name : ' + args['name']
-        return ret 
+        ret = 'uid : ' + args['uid']
+        return ret
 
 #가축 조회 쿼리 함수
 def queryLivestockListByUid(uid):

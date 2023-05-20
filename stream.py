@@ -1,30 +1,35 @@
-from flask import Flask, Blueprint, Response, render_template, jsonify
-from flask_restful import Resource, reqparse
-import cv2
+from flask import Blueprint, Response, render_template, url_for
 import os
-import json
 
 stream_blueprint = Blueprint('stream', __name__)
 
-# 스트리밍 API 테스터 -> mp4 스트리밍 방식
+# mp4 파일 경로 설정
+video_path = 'video.mp4'
+video_abs_path = os.path.abspath(video_path)
+
+# 비디오 스트리밍 생성기 함수
+def generate():
+    with open(video_abs_path, 'rb') as video:
+        while True:
+            data = video.read(1024*8)  # 적절한 데이터 크기로 설정
+            if not data:
+                break
+            yield (b'--frame\r\n'
+                   b'Content-Type: video/mp4\r\n\r\n' + data + b'\r\n')
+
+# 스트리밍 API
 @stream_blueprint.route('/stream')
 def stream():
-    # mp4 파일 경로 설정
-    path = '/Users/parksangcheol/Desktop/flask_test/video.mp4'
-
-    # 비디오 스트리밍 생성기 함수
-    def generate():
-        with open(path, 'rb') as video:
-            while True:
-                data = video.read(1024*8) # 적절한 데이터 크기로 설정
-                if not data:
-                    break
-                yield (b'--frame\r\n'
-                       b'Content-Type: video/mp4\r\n\r\n' + data + b'\r\n')
-    
     return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
-'''# 비디오 스트리밍 함수 -> jpeg 스트리밍 방식
+# HTML 템플릿을 렌더링하여 반환
+@stream_blueprint.route('/stream_test')
+def stream_test():
+    video_src = url_for('stream.stream')
+    return render_template('index.html', video_src=video_src)
+ 
+'''
+# 비디오 스트리밍 함수 -> jpeg 스트리밍 방식
 def gen(video_path):
     cap = cv2.VideoCapture(video_path)
     #cap.set(cv2.CAP_PROP_FRAME_WIDTH, 320)
@@ -46,5 +51,6 @@ def gen(video_path):
 @stream_blueprint.route('/stream')
 def stream():
     # 스트리밍할 비디오 경로
-    video_path = '/Users/parksangcheol/Desktop/flask_test/video.mp4'
-    return Response(gen(video_path), mimetype='multipart/x-mixed-replace; boundary=frame')'''
+    video_path = '/Users/parksangcheol/Desktop/SLS_flask/video.mp4'
+    return Response(gen(video_path), mimetype='multipart/x-mixed-replace; boundary=frame')
+'''
