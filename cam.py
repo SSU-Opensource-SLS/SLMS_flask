@@ -48,6 +48,8 @@ class CamRegistration(Resource):
                 cur.execute(sql, (args['uid'],args['livestock_type'],args['uid'],args['livestock_type']))
                 mydb.commit()
         cam = Cam(args['uid'],args['livestock_type'])
+        # 연결 유지를 위해 Ping을 수행
+        mydb.ping(reconnect=True)
         return cam
 
 #캠 조회(uid) 쿼리 함수

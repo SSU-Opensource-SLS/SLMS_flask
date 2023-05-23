@@ -53,7 +53,10 @@ class MemberRegistration(Resource):
             with mydb.cursor() as cur:
                 cur.execute(sql, (args['uid'], args['email'], args['name'], args['birth']))
                 mydb.commit()
+                
         ret = args['uid']
+        # 연결 유지를 위해 Ping을 수행
+        mydb.ping(reconnect=True)
         return ret
     
 # 회원 조회 API

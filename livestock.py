@@ -58,6 +58,9 @@ class LivestockRegistration(Resource):
                 cur.execute(sql, (args['uid'],args['livestock_type'],args['name'],args['cattle'],args['uid'],args['livestock_type']))
                 mydb.commit()
         ret = 'uid : ' + args['uid']
+        
+        # 연결 유지를 위해 Ping을 수행
+        mydb.ping(reconnect=True)
         return ret
 
 #가축 조회 쿼리 함수
