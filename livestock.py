@@ -62,6 +62,19 @@ class LivestockRegistration(Resource):
         # 연결 유지를 위해 Ping을 수행
         mydb.ping(reconnect=True)
         return ret
+    
+# 가축 삭제 API
+@livestock_ns.route('/<string:uid>/<string:livestock_type>/<int:num>')
+class LivestockDeletion(Resource):
+    def delete(self, uid, livestock_type, num):
+        sql = "DELETE FROM livestock WHERE uid = %s AND livestock_type = %s AND num = %s"
+        with mydb:
+            with mydb.cursor() as cur:
+                cur.execute(sql, (uid, livestock_type, num))
+                mydb.commit()
+        ret = 'Deleted livestock with uid: {}, livestock_type: {}, num: {}'.format(uid, livestock_type, num)
+        mydb.ping(reconnect=True)
+        return ret
 
 #가축 조회 쿼리 함수
 def queryLivestockListByUid(uid):
@@ -96,7 +109,24 @@ class LivestockManagerByUidAndType(Resource):
     def get(self, uid, livestock_type):
         result = queryLivestockListByUidAndType(uid,livestock_type)
         return jsonify([x.__json__() for x in result])
+    
+#마지막 가축 조회 쿼리 함수
+def queryLastLivestockListByUidAndType(uid, livestock_type):
+    sql = "SELECT * FROM livestock WHERE UID = (%s) AND livestock_type = (%s) ORDER BY num DESC LIMIT 1"
+    temp = execute_sql(sql, (uid,livestock_type,))
+    result = Livestock(temp[0][0],temp[0][1],temp[0][3],temp[0][4],temp[0][5],temp[0][2])
+    return result
+    
+#마지막 가축 조회(uid + livestock_type) API  
+@livestock_ns.route("/last/<string:uid>/<string:livestock_type>")
+class LivestockManagerLastByUidAndType(Resource):
+    @livestock_ns.response(404, 'uid does not exist')
+    def get(self, uid, livestock_type):
+        result = queryLastLivestockListByUidAndType(uid,livestock_type)
+        return jsonify(result.__dict__)
 
 api.add_resource(LivestockRegistration, '/')
+api.add_resource(LivestockDeletion, '/<string:uid>/<string:livestock_type>/<int:num>')
 api.add_resource(LivestockManagerByUid, '/<string:uid>')
 api.add_resource(LivestockManagerByUidAndType, '/<string:uid>/<string:livestock_type>')
+api.add_resource(LivestockManagerLastByUidAndType, '/last/<string:uid>/<string:livestock_type>')

@@ -58,6 +58,19 @@ class MemberRegistration(Resource):
         # 연결 유지를 위해 Ping을 수행
         mydb.ping(reconnect=True)
         return ret
+
+# 회원 탈퇴
+@member_ns.route('/<string:uid>')
+class MemberDeletion(Resource):
+    def delete(self, uid):
+        sql = "DELETE FROM member WHERE uid = %s"
+        with mydb:
+            with mydb.cursor() as cur:
+                cur.execute(sql, (uid,))
+                mydb.commit()
+        ret = 'Deleted member with uid: ' + uid
+        mydb.ping(reconnect=True)
+        return ret
     
 # 회원 조회 API
 @member_ns.route('/<string:uid>')
@@ -77,4 +90,5 @@ def queryMemberData(uid):
     return result
 
 api.add_resource(MemberRegistration, '/')
+api.add_resource(MemberDeletion, '/<string:uid>')
 api.add_resource(MemberManager, '/<string:uid>')

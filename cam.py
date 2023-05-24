@@ -51,6 +51,18 @@ class CamRegistration(Resource):
         # 연결 유지를 위해 Ping을 수행
         mydb.ping(reconnect=True)
         return cam
+    
+@cam_ns.route('/<string:uid>/<string:livestock_type>/<int:num>')
+class CamDeletion(Resource):
+    def delete(self, uid, livestock_type, num):
+        sql = "DELETE FROM cam WHERE uid = %s AND livestock_type = %s AND num = %s"
+        with mydb:
+            with mydb.cursor() as cur:
+                cur.execute(sql, (uid, livestock_type, num))
+                mydb.commit()
+        ret = 'Deleted cam with uid: {}, livestock_type: {}, num: {}'.format(uid, livestock_type, num)
+        mydb.ping(reconnect=True)
+        return ret
 
 #캠 조회(uid) 쿼리 함수
 def queryCamByUid(uid):
@@ -87,5 +99,6 @@ class CamManagerByUidAndType(Resource):
         return jsonify([x.__json__() for x in result])
     
 api.add_resource(CamRegistration, '/')
+api.add_resource(CamDeletion, '/<string:uid>/<string:livestock_type>/<int:num>')
 api.add_resource(CamManagerByUid, '/<string:uid>')
 api.add_resource(CamManagerByUidAndType, '/<string:uid>/<string:livestock_type>')
