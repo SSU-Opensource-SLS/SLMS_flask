@@ -1,17 +1,16 @@
-from flask import Blueprint, Response, render_template, url_for
+from flask import Blueprint, Response, render_template, url_for, send_file
 import os
 
 stream_blueprint = Blueprint('stream', __name__)
 
 # mp4 파일 경로 설정
-video_path = 'video.mp4'
-video_abs_path = os.path.abspath(video_path)
+video_abs_path = os.path.abspath('video.mp4')
 
 # 비디오 스트리밍 생성기 함수
 def generate():
     with open(video_abs_path, 'rb') as video:
         while True:
-            data = video.read(1024*8)  # 적절한 데이터 크기로 설정
+            data = video.read(1024 * 1024)  # 1MB 데이터 크기로 설정
             if not data:
                 break
             yield (b'--frame\r\n'
@@ -20,7 +19,8 @@ def generate():
 # 스트리밍 API
 @stream_blueprint.route('/stream')
 def stream():
-    return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
+    return send_file(video_abs_path)
+    #return Response(generate(), mimetype='multipart/x-mixed-replace; boundary=frame')
 
 # HTML 템플릿을 렌더링하여 반환
 @stream_blueprint.route('/stream_test')
