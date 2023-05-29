@@ -31,31 +31,38 @@ cam_fields = cam_ns.model('Cam', {
     'livestock_type' : fields.String(),
     'num' : fields.Integer(),
 })
-
+    
 # 캠 등록 API
 @cam_ns.route('/')
 class CamRegistration(Resource):
     @cam_ns.expect(cam_fields)
     def post(self):
-        sql = "INSERT INTO raspi_cam (uid, livestock_type, num) SELECT %s, %s,IFNULL(MAX(num), 0)+1 FROM raspi_cam WHERE uid = %s AND livestock_type = %s"
+        sql = "INSERT INTO raspi_cam (uid, livestock_type, num) SELECT %s, %s, IFNULL(MAX(num), 0) + 1 FROM raspi_cam WHERE uid = %s AND livestock_type = %s"
         parser = reqparse.RequestParser()
-        parser.add_argument('uid',type=str)
-        parser.add_argument('livestock_type',type=str)
+        parser.add_argument('uid', type=str)
+        parser.add_argument('livestock_type', type=str)
     
         args = parser.parse_args()
         with mydb:
             with mydb.cursor() as cur:
-                cur.execute(sql, (args['uid'],args['livestock_type'],args['uid'],args['livestock_type']))
+                cur.execute(sql, (args['uid'], args['livestock_type'], args['uid'], args['livestock_type']))
                 mydb.commit()
-        cam = Cam(args['uid'],args['livestock_type'])
-        # 연결 유지를 위해 Ping을 수행
-        mydb.ping(reconnect=True)
-        return cam
+                # 새로 생성된 num 값을 조회
+                cur.execute("SELECT num FROM raspi_cam WHERE uid = %s AND livestock_type = %s", (args['uid'], args['livestock_type']))
+                result = cur.fetchall()
+                if result:
+                    num = result[-1][0]
+                    cam = Cam(args['uid'], args['livestock_type'], num)
+                    # 연결 유지를 위해 Ping을 수행
+                    mydb.ping(reconnect=True)
+                    return jsonify(cam.__dict__)
+        return {'message': 'Failed to register cam'}, 400
+
     
 @cam_ns.route('/<string:uid>/<string:livestock_type>/<int:num>')
 class CamDeletion(Resource):
     def delete(self, uid, livestock_type, num):
-        sql = "DELETE FROM cam WHERE uid = %s AND livestock_type = %s AND num = %s"
+        sql = "DELETE FROM raspi_cam WHERE uid = %s AND livestock_type = %s AND num = %s"
         with mydb:
             with mydb.cursor() as cur:
                 cur.execute(sql, (uid, livestock_type, num))
