@@ -2,22 +2,27 @@ import pymysql
 from flask import Blueprint, jsonify
 from flask_restx import Namespace, Api, Resource, reqparse, fields
 from config import mydb
+import time
 
 cam_blueprint = Blueprint('cam', __name__)
 cam_ns = Namespace('cam', description='캠 등록 및 조회')
 api = Api(namespace=cam_ns, version='1.0', title='SLS API', description='Sagger API', doc="/api-docs")
 
 class Cam:
-    def __init__(self,uid,livestock_type,num = None):
+    def __init__(self,uid,livestock_type,livestock_name,url,num = None):
         self.uid = uid
         self.livestock_type = livestock_type
         self.num = num
+        self.livestock_name = livestock_name
+        self.url = url
         
     def __json__(self):
         return {
             'uid': self.uid,
             'livestock_type': self.livestock_type,
-            'num': self.num
+            'num': self.num,
+            'livestock_name': self.livestock_name,
+            'url': self.url
         }
  
 def execute_sql(sql, params=None):
@@ -30,6 +35,8 @@ cam_fields = cam_ns.model('Cam', {
     'uid' : fields.String(),
     'livestock_type' : fields.String(),
     'num' : fields.Integer(),
+    'livestock_name' : fields.String(),
+    'url' : fields.String()
 })
     
 # 캠 등록 API
@@ -37,28 +44,27 @@ cam_fields = cam_ns.model('Cam', {
 class CamRegistration(Resource):
     @cam_ns.expect(cam_fields)
     def post(self):
-        sql = "INSERT INTO raspi_cam (uid, livestock_type, num) SELECT %s, %s, IFNULL(MAX(num), 0) + 1 FROM raspi_cam WHERE uid = %s AND livestock_type = %s"
+        sql = "INSERT INTO raspi_cam (uid, livestock_type, livestock_name, url ,num) SELECT %s, %s, %s, %s, IFNULL(MAX(num), 0) + 1 FROM raspi_cam WHERE uid = %s AND livestock_type = %s"
         parser = reqparse.RequestParser()
         parser.add_argument('uid', type=str)
         parser.add_argument('livestock_type', type=str)
+        parser.add_argument('livestock_name', type=str)
+        parser.add_argument('url', type=str)
     
         args = parser.parse_args()
         with mydb:
             with mydb.cursor() as cur:
-                cur.execute(sql, (args['uid'], args['livestock_type'], args['uid'], args['livestock_type']))
+                cur.execute(sql, (args['uid'], args['livestock_type'],args['livestock_name'],args['url'], args['uid'], args['livestock_type']))
                 mydb.commit()
                 # 새로 생성된 num 값을 조회
-                cur.execute("SELECT num FROM raspi_cam WHERE uid = %s AND livestock_type = %s", (args['uid'], args['livestock_type']))
-                result = cur.fetchall()
-                if result:
-                    num = result[-1][0]
-                    cam = Cam(args['uid'], args['livestock_type'], num)
-                    # 연결 유지를 위해 Ping을 수행
-                    mydb.ping(reconnect=True)
-                    return jsonify(cam.__dict__)
-        return {'message': 'Failed to register cam'}, 400
+                result = queryCamByUidAndlivestockType(args['uid'], args['livestock_type'])
+                if not result:
+                    return {'message': 'Failed to register cam'}, 400
+        mydb.ping(reconnect=True)
+        cam = result[-1]
+        return jsonify(cam.__dict__)
+        
 
-    
 @cam_ns.route('/<string:uid>/<string:livestock_type>/<int:num>')
 class CamDeletion(Resource):
     def delete(self, uid, livestock_type, num):
@@ -77,7 +83,7 @@ def queryCamByUid(uid):
     temp = execute_sql(sql, (uid,))
     result  = []
     for i in temp:
-        result.append(Cam(i[0],i[1],i[2]))
+        result.append(Cam(i[0],i[1],i[3],i[4],i[2]))
     return result
 
 #캠 조회(uid) API    
@@ -94,7 +100,7 @@ def queryCamByUidAndlivestockType(uid, livestock_type):
     temp = execute_sql(sql, (uid, livestock_type,))
     result = []
     for i in temp:
-        result.append(Cam(i[0],i[1],i[2]))
+        result.append(Cam(i[0],i[1],i[3],i[4],i[2]))
     return result
 
 #캠 조회(uid + livestock_type) API  
