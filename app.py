@@ -4,6 +4,7 @@ from member import member_blueprint, member_ns
 from livestock import livestock_blueprint, livestock_ns
 from cam import cam_blueprint, cam_ns
 from stream import stream_blueprint
+from notify import notify_blueprint
 
 app = Flask(__name__)
 
@@ -11,6 +12,7 @@ app.register_blueprint(member_blueprint, url_prefix='/member')
 app.register_blueprint(livestock_blueprint, url_prefix='/livestock')
 app.register_blueprint(cam_blueprint, url_prefix='/cam')
 app.register_blueprint(stream_blueprint)
+app.register_blueprint(notify_blueprint)
 
 @app.route('/')
 def index():
