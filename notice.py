@@ -11,7 +11,7 @@ firebase_admin.initialize_app(cred)
 
 @notify_blueprint.route('/send_notification', methods=['POST'])
 def send_notification():
-    user_id = request.json['user_id']  # 사용자 식별자 (UID)를 요청의 JSON 데이터에서 가져옵니다.
+    user_id = request.json['user_id']  # 사용자 식별자 토큰을 JSON 데이터에서 가져옵니다.
     title = request.json['title']  # 알림 제목을 요청의 JSON 데이터에서 가져옵니다.
     body = request.json['body']  # 알림 내용을 요청의 JSON 데이터에서 가져옵니다.
 

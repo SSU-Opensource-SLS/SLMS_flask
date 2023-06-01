@@ -4,7 +4,7 @@ from member import member_blueprint, member_ns
 from livestock import livestock_blueprint, livestock_ns
 from cam import cam_blueprint, cam_ns
 from stream import stream_blueprint
-from notify import notify_blueprint
+from notice import notify_blueprint#, notice_ns
 
 app = Flask(__name__)
 
@@ -23,6 +23,7 @@ api = Api(app, version='1.0', title='SLS API', description='Sagger API', doc="/a
 api.add_namespace(member_ns, path='/member')
 api.add_namespace(livestock_ns, path='/livestock')
 api.add_namespace(cam_ns, path='/cam')
+#api.add_namespace(notice_ns, path='/notice')
 
 if __name__ == '__main__':
     app.run(host="0.0.0.0",port=5000,debug=True)

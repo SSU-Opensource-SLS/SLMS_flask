@@ -111,7 +111,25 @@ class CamManagerByUidAndType(Resource):
         result = queryCamByUidAndlivestockType(uid, livestock_type)
         return jsonify([x.__json__() for x in result])
     
+#캠 조회 쿼리 함수
+def queryCamByUidAndlivestockTypeAndNum(uid, livestock_type, num):
+    sql = "SELECT * FROM raspi_cam WHERE UID = (%s) AND livestock_type = (%s) AND num = (%s)"
+    temp = execute_sql(sql, (uid, livestock_type, num,))
+    result = []
+    for i in temp:
+        result.append(Cam(i[0],i[1],i[3],i[4],i[2]))
+    return result
+
+#캠 조회(uid + livestock_type) API  
+@cam_ns.route("/<string:uid>/<string:livestock_type>/<int:num>")
+class CamManagerByUidAndTypeAndNum(Resource):
+    @cam_ns.response(404, 'uid does not exist')
+    def get(self, uid, livestock_type, num):
+        result = queryCamByUidAndlivestockTypeAndNum(uid, livestock_type, num)
+        return jsonify([x.__json__() for x in result])
+    
 api.add_resource(CamRegistration, '/')
 api.add_resource(CamDeletion, '/<string:uid>/<string:livestock_type>/<int:num>')
 api.add_resource(CamManagerByUid, '/<string:uid>')
 api.add_resource(CamManagerByUidAndType, '/<string:uid>/<string:livestock_type>')
+api.add_resource(CamManagerByUidAndTypeAndNum, '/<string:uid>/<string:livestock_type>/<int:num>')

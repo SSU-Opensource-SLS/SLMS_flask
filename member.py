@@ -8,9 +8,10 @@ member_ns = Namespace('member', description='회원 등록 및 조회')
 api = Api(namespace=member_ns, version='1.0', title='SLS API', description='Sagger API', doc="/api-docs")
 
 class Member:
-    def __init__(self,uid,email,name,birth):
+    def __init__(self,uid,email,token,name,birth):
         self.uid = uid
         self.email = email
+        self.token = token
         self.name = name
         self.birth = birth
         
@@ -18,6 +19,7 @@ class Member:
         return {
             'uid' : self.uid,
             'email' : self.email,
+            'token' : self.token,
             'name' : self.name,
             'birth' : self.birth,
         }
@@ -30,7 +32,8 @@ def execute_sql(sql, params=None):
 
 member_fields = member_ns.model('Member', {
     'uid': fields.String(),
-    'email': fields.String,
+    'email': fields.String(),
+    'token': fields.String(),
     'name': fields.String(),
     'birth': fields.String(),
 })
@@ -40,10 +43,11 @@ member_fields = member_ns.model('Member', {
 class MemberRegistration(Resource):
     @member_ns.expect(member_fields)
     def post(self):
-        sql = "INSERT INTO member (uid,email,name,birth) VALUES (%s, %s, %s, %s)"
+        sql = "INSERT INTO member (uid,email,token,name,birth) VALUES (%s, %s, %s, %s, %s)"
         parser = reqparse.RequestParser()
         parser.add_argument('uid',type=str)
         parser.add_argument('email',type=str)
+        parser.add_argument('token',type=str)
         parser.add_argument('name',type=str)
         parser.add_argument('birth',type=str)
         
@@ -51,7 +55,7 @@ class MemberRegistration(Resource):
 
         with mydb:
             with mydb.cursor() as cur:
-                cur.execute(sql, (args['uid'], args['email'], args['name'], args['birth']))
+                cur.execute(sql, (args['uid'], args['email'], args['token'], args['name'], args['birth']))
                 mydb.commit()
                 
         ret = args['uid']
@@ -80,7 +84,7 @@ class MemberManager(Resource):
         tempMember = queryMemberData(uid)
         if not tempMember:
             return {'message': 'uid does not exist'}, 404
-        member = Member(tempMember[0][0], tempMember[0][1], tempMember[0][2], tempMember[0][3])
+        member = Member(tempMember[0][0], tempMember[0][1], tempMember[0][2], tempMember[0][3], tempMember[0][4])
         return jsonify(member.__dict__)
 
 #회원 조회 쿼리 함수
