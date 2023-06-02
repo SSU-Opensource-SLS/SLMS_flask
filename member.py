@@ -139,13 +139,13 @@ def queryMemberData(uid):
 class TokenManager(Resource):
     @member_ns.response(404, 'uid does not exist')
     def get(self, uid):
-        token = queryMemberData(uid)
+        token = queryTokenData(uid)
         if not token:
             return {'message': 'uid does not exist'}, 404
         return jsonify([x.__json__() for x in token])
 
 #회원 조회 쿼리 함수
-def queryMemberData(uid):
+def queryTokenData(uid):
     sql = "SELECT * FROM fcm_token WHERE UID = (%s)"
     temp = execute_sql(sql, (uid,))
     result = []
