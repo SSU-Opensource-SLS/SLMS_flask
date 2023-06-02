@@ -1,7 +1,7 @@
 import pymysql
 from flask import Blueprint, jsonify
 from flask_restx import Namespace, Api, Resource, reqparse, fields
-from config import mydb
+from config import create_db_connection
 
 livestock_blueprint = Blueprint('livestock', __name__)
 livestock_ns = Namespace('livestock', description='가축 등록 및 조회')
@@ -26,6 +26,7 @@ class Livestock:
         }
         
 def execute_sql(sql, params=None):
+    mydb = create_db_connection()
     with mydb.cursor() as cursor:
         cursor.execute(sql, params)
         result = cursor.fetchall()
@@ -45,6 +46,7 @@ livestock_fields = livestock_ns.model('Livestock', {
 class LivestockRegistration(Resource):
     @livestock_ns.expect(livestock_fields)
     def post(self):
+        mydb = create_db_connection()
         sql = "INSERT INTO livestock (uid, livestock_type, name, cattle, num) SELECT %s, %s, %s, %s, IFNULL(MAX(num), 0)+1 FROM livestock WHERE uid = %s AND livestock_type = %s"
         parser = reqparse.RequestParser()
         parser.add_argument('uid',type=str)
@@ -67,6 +69,7 @@ class LivestockRegistration(Resource):
 @livestock_ns.route('/<string:uid>/<string:livestock_type>/<int:num>')
 class LivestockDeletion(Resource):
     def delete(self, uid, livestock_type, num):
+        mydb = create_db_connection()
         sql = "DELETE FROM livestock WHERE uid = %s AND livestock_type = %s AND num = %s"
         with mydb:
             with mydb.cursor() as cur:

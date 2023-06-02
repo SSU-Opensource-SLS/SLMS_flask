@@ -1,7 +1,7 @@
 import pymysql
 from flask import Blueprint, jsonify
 from flask_restx import Namespace, Api, Resource, reqparse, fields
-from config import mydb
+from config import create_db_connection
 import time
 
 cam_blueprint = Blueprint('cam', __name__)
@@ -26,6 +26,7 @@ class Cam:
         }
  
 def execute_sql(sql, params=None):
+    mydb = create_db_connection()
     with mydb.cursor() as cursor:
         cursor.execute(sql, params)
         result = cursor.fetchall()
@@ -44,6 +45,7 @@ cam_fields = cam_ns.model('Cam', {
 class CamRegistration(Resource):
     @cam_ns.expect(cam_fields)
     def post(self):
+        mydb = create_db_connection()
         sql = "INSERT INTO raspi_cam (uid, livestock_type, livestock_name, url ,num) SELECT %s, %s, %s, %s, IFNULL(MAX(num), 0) + 1 FROM raspi_cam WHERE uid = %s AND livestock_type = %s"
         parser = reqparse.RequestParser()
         parser.add_argument('uid', type=str)
@@ -68,6 +70,7 @@ class CamRegistration(Resource):
 @cam_ns.route('/<string:uid>/<string:livestock_type>/<int:num>')
 class CamDeletion(Resource):
     def delete(self, uid, livestock_type, num):
+        mydb = create_db_connection()
         sql = "DELETE FROM raspi_cam WHERE uid = %s AND livestock_type = %s AND num = %s"
         with mydb:
             with mydb.cursor() as cur:
