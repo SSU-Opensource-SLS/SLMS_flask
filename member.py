@@ -1,5 +1,5 @@
 import pymysql
-from flask import Blueprint, jsonify
+from flask import Blueprint, jsonify, abort
 from flask_restx import Namespace, Api, Resource, reqparse, fields
 from config import create_db_connection
 
@@ -53,41 +53,49 @@ token_fields = member_ns.model('Token', {
     'token': fields.String(),
 })
 
-# 회원 등록 API
 @member_ns.route('/')
 class MemberRegistration(Resource):
-    @member_ns.expect(member_fields)
+    @member_ns.expect(member_fields, validate=True)
+    @member_ns.response(200, "Success")
+    @member_ns.response(500, "Internal Server Error")
+    @member_ns.doc(description='회원 등록 API')
     def post(self):
-        mydb = create_db_connection()
-        sql = "INSERT INTO member (uid,email,name,birth) VALUES (%s, %s, %s, %s)"
-        parser = reqparse.RequestParser()
-        parser.add_argument('uid',type=str)
-        parser.add_argument('email',type=str)
-        parser.add_argument('name',type=str)
-        parser.add_argument('birth',type=str)
-        
-        args = parser.parse_args()
+        try:
+            mydb = create_db_connection()
+            sql = "INSERT INTO member (uid,email,name,birth) VALUES (%s, %s, %s, %s)"
+            parser = reqparse.RequestParser()
+            parser.add_argument('uid',type=str, required=True, help='UID is required')
+            parser.add_argument('email',type=str, required=True, help='Email is required')
+            parser.add_argument('name',type=str, required=True, help='Name is required')
+            parser.add_argument('birth',type=str, required=True, help='Birth is required')
+            
+            args = parser.parse_args()
 
-        with mydb:
-            with mydb.cursor() as cur:
-                cur.execute(sql, (args['uid'], args['email'], args['name'], args['birth']))
-                mydb.commit()
-                
-        ret = args['uid']
-        # 연결 유지를 위해 Ping을 수행
-        mydb.ping(reconnect=True)
-        return ret
+            with mydb:
+                with mydb.cursor() as cur:
+                    cur.execute(sql, (args['uid'], args['email'], args['name'], args['birth']))
+                    mydb.commit()
+                    
+            ret = args['uid']
+            # 연결 유지를 위해 Ping을 수행
+            mydb.ping(reconnect=True)
+            return ret
+        except Exception as e:
+            abort(500, str(e))
     
 # 토큰 등록 API
 @member_ns.route('/token')
 class MemberAddToken(Resource):
     @member_ns.expect(token_fields)
+    @member_ns.response(200, "Success")
+    @member_ns.response(500, "Internal Server Error")
+    @member_ns.doc(description='회원 토큰 저장 API')
     def post(self):
         mydb = create_db_connection()
         sql = "INSERT INTO fcm_token (uid, token) VALUES (%s, %s)"
         parser = reqparse.RequestParser()
-        parser.add_argument('uid', type=str)
-        parser.add_argument('token', type=str)
+        parser.add_argument('uid', type=str, required=True, help="UID is required.")
+        parser.add_argument('token', type=str, required=True, help="Token is required.")
         args = parser.parse_args()
 
         with mydb:
@@ -96,31 +104,42 @@ class MemberAddToken(Resource):
                     cur.execute(sql, (args['uid'], args['token']))
                     mydb.commit()
                     ret = args['uid']
-                except:
+                except Exception as e:
                     ret = {'message': 'Duplicate uid and token'}
+                    return ret, 500
                 finally:
                     # 연결 유지를 위해 Ping을 수행
                     mydb.ping(reconnect=True)
-        return ret
+        return ret, 200
+
 
 # 회원 탈퇴
 @member_ns.route('/<string:uid>')
 class MemberDeletion(Resource):
+    @member_ns.response(200, 'Success')
+    @member_ns.response(500, 'Internal Server Error')
+    @member_ns.doc(description='회원 탈퇴 API')
     def delete(self, uid):
         mydb = create_db_connection()
         sql = "DELETE FROM member WHERE uid = %s"
         with mydb:
             with mydb.cursor() as cur:
-                cur.execute(sql, (uid,))
-                mydb.commit()
-        ret = 'Deleted member with uid: ' + uid
+                try:
+                    cur.execute(sql, (uid,))
+                    mydb.commit()
+                    ret = 'Deleted member with uid: ' + uid
+                except Exception as e:
+                    ret = {'message': str(e)}
+                    return ret, 500
         mydb.ping(reconnect=True)
-        return ret
+        return ret, 200
     
 # 회원 조회 API
 @member_ns.route('/<string:uid>')
 class MemberManager(Resource):
+    @member_ns.response(200, 'Success')
     @member_ns.response(404, 'uid does not exist')
+    @member_ns.doc(description='회원 조회 API')
     def get(self, uid):
         tempMember = queryMemberData(uid)
         if not tempMember:
@@ -137,7 +156,9 @@ def queryMemberData(uid):
 # 토큰 조회 API
 @member_ns.route('/token/<string:uid>')
 class TokenManager(Resource):
+    @member_ns.response(200, 'Success')
     @member_ns.response(404, 'uid does not exist')
+    @member_ns.doc(description='회원 토큰 조회 API')
     def get(self, uid):
         token = queryTokenData(uid)
         if not token:
