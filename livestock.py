@@ -68,7 +68,7 @@ class LivestockRegistration(Resource):
                     ret = {'message': str(e)}
                     return ret, 400
         mydb.ping(reconnect=True)
-        return ret, 201
+        return ret
 
 
 # 가축 삭제 API
@@ -90,7 +90,7 @@ class LivestockDeletion(Resource):
                     ret = {'message': str(e)}
                     return ret, 500
         mydb.ping(reconnect=True)
-        return ret, 200
+        return ret
 
 
 # 가축 조회 쿼리 함수
@@ -144,7 +144,7 @@ class LivestockManagerByUidAndType(Resource):
             result = queryLivestockListByUidAndType(uid, livestock_type)
         except Exception as e:
             return {'message': str(e)}, 404
-        return jsonify([x.__json__() for x in result]), 200
+        return jsonify([x.__json__() for x in result])
 
     
 # 마지막 가축 조회 쿼리 함수
@@ -168,7 +168,7 @@ class LivestockManagerLastByUidAndType(Resource):
             result = queryLastLivestockListByUidAndType(uid, livestock_type)
         except Exception as e:
             return {'message': str(e)}, 404
-        return jsonify(result.__dict__), 200
+        return jsonify(result.__dict__)
 
 
 api.add_resource(LivestockRegistration, '/')

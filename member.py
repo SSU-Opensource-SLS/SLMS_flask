@@ -110,7 +110,7 @@ class MemberAddToken(Resource):
                 finally:
                     # 연결 유지를 위해 Ping을 수행
                     mydb.ping(reconnect=True)
-        return ret, 200
+        return ret
 
 
 # 회원 탈퇴
@@ -132,7 +132,7 @@ class MemberDeletion(Resource):
                     ret = {'message': str(e)}
                     return ret, 500
         mydb.ping(reconnect=True)
-        return ret, 200
+        return ret
     
 # 회원 조회 API
 @member_ns.route('/<string:uid>')
