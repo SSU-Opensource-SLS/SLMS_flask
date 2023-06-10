@@ -114,9 +114,11 @@ class LivestockManagerByUid(Resource):
     def get(self, uid):
         try:
             result = queryLivestockListByUid(uid)
+            if not result:
+                return {'message': 'uid does not exist'}, 404
+            return jsonify([x.__json__() for x in result])
         except Exception as e:
             return {'message': str(e)}, 404
-        return jsonify([x.__json__() for x in result]), 200
 
 
 # 가축 조회 쿼리 함수
